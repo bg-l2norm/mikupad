@@ -2416,11 +2416,17 @@ function importSillyTavernWorldInfo(json, setWorldInfo, importBehavior) {
 	});
 }
 
-function InputSlider({ label, value, min = 0, max = 100, step = 1, readOnly, hidden, strict, onValueChange, ...props }) {
+function InputSlider({ label, value, min = 0, max = 100, step = 1, readOnly, hidden, strict, snap, onValueChange, ...props }) {
 	const handleChange = (newValue) => {
 		if (strict) {
 			if (newValue < min) newValue = min;
 			if (newValue > max) newValue = max;
+		}
+		if (snap) {
+			const snappedValue = Math.round(newValue / snap) * snap;
+			if (Math.abs(newValue - snappedValue) < snap * 0.2) {
+				newValue = snappedValue;
+			}
 		}
 		onValueChange(newValue);
 	};
@@ -3910,7 +3916,7 @@ function LogitBiasModal({ isOpen, closeModal, logitBias, setLogitBias, logitBias
 			</${Modal}>`;
 }
 
-function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel }) {
+function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }) {
 	const [addDeleteTemplate, setAddDeleteTemplate] = useState(false);
 	const [templateDuplicate, setTemplateDuplicate] = useState(false);
 	const [newTemplateName, setNewTemplateName] = useState(undefined);
@@ -4169,6 +4175,13 @@ function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedT
 					value=${newTemplateName ?? selectedTemplate}
 					onValueChange=${setSelectedTemplate}
 					options=${templateList}/>
+				<button
+					title="Apply Chat Template to Editor"
+					disabled=${!!cancel}
+					class="hbox-button"
+					onClick=${() => applyChatTemplate()}>
+					Apply
+				</button>
 				<button
 					title="Duplicate Currently Selected Instruct Template"
 					disabled=${!!cancel}
@@ -6058,22 +6071,14 @@ const defaultTemplates = {
 
 
 const availableFonts = {
-	"Theme Default": { cssValue: null, url: null },
+	"Default": { cssValue: null, url: null },
 	"System Serif": { cssValue: "serif", url: null },
 	"System Sans-serif": { cssValue: "sans-serif", url: null },
 	"System Monospace": { cssValue: "monospace", url: null },
-	"Linux Libertine": { cssValue: '"TypoPRO Linux Libertine", serif', url: 'https://cdn.jsdelivr.net/npm/@typopro/web-linux-libertine@3.7.5/TypoPRO-LinuxLibertine.css' },
-	"IM Fell English": { cssValue: '"IM Fell English", serif', url: 'https://fonts.googleapis.com/css2?family=IM+Fell+English&display=swap' },
-	"Sorts Mill Goudy": { cssValue: '"Sorts Mill Goudy", serif', url: 'https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy&display=swap' },
-	"Times New Roman": { cssValue: '"Times New Roman", Times, serif', url: null },
-	"Inter": { cssValue: '"Inter", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap' },
+		"Inter": { cssValue: '"Inter", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap' },
 	"Roboto": { cssValue: '"Roboto", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap' },
-	"Open Sans": { cssValue: '"Open Sans", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;700&display=swap' },
 	"Fira Code": { cssValue: '"Fira Code", monospace', url: 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap' },
-	"JetBrains Mono": { cssValue: '"JetBrains Mono", monospace', url: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap' },
-	"Source Code Pro": { cssValue: '"Source Code Pro", monospace', url: 'https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&display=swap' },
 	"Lora": { cssValue: '"Lora", serif', url: 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,700;1,400&display=swap' },
-	"Merriweather": { cssValue: '"Merriweather", serif', url: 'https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap' }
 };
 
 const defaultThemes = {
@@ -6209,7 +6214,7 @@ html.nockoffAI {
 	--color-bg-disabled-1: #161833;
 	--color-bg-disabled-2: #161833;
 
-	font-family: var(--ui-font-family, var(--main-font-family, "Source Sans Pro", "Helvetica Neue", sans-serif));
+	font-family: var(--ui-font-family, var(--main-font-family, "Inter", sans-serif));
 	font-size: 15.5px;
 
 	accent-color: var(--color-base-30);
@@ -6631,12 +6636,21 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 
 					let fullText = p.map(c => c.content).join('');
 					if (fullText.startsWith(sysPre)) {
-						const sysSufIndex = fullText.indexOf(sysSuf, sysPre.length);
+						let sysSufIndex = -1;
+						if (sysSuf) {
+							sysSufIndex = fullText.indexOf(sysSuf, sysPre.length);
+						} else {
+							const instPre = templates[selectedTemplate]?.instPre?.replace(/\\n/g, '\n');
+							const instSuf = templates[selectedTemplate]?.instSuf?.replace(/\\n/g, '\n');
+							const indices = [instPre, instSuf].map(prefix => prefix ? fullText.indexOf(prefix, sysPre.length) : -1).filter(index => index !== -1);
+							sysSufIndex = indices.length > 0 ? Math.min(...indices) : fullText.length;
+						}
+
 						if (sysSufIndex !== -1) {
 							const extracted = fullText.slice(sysPre.length, sysSufIndex);
 							setSystemPromptModeText(extracted);
 
-							const toRemove = sysPre.length + extracted.length + sysSuf.length;
+							const toRemove = sysPre.length + extracted.length + (sysSuf ? sysSuf.length : 0);
 							let removed = 0;
 							let newChunks = [];
 							for (let chunk of p) {
@@ -6662,7 +6676,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 					if (!systemPromptModeText) return p;
 					const sysPre = templates[selectedTemplate]?.sysPre?.replace(/\\n/g, '\n');
 					const sysSuf = templates[selectedTemplate]?.sysSuf?.replace(/\\n/g, '\n');
-					if (!sysPre || !sysSuf) return p;
+					if (sysPre === undefined || sysSuf === undefined) return p;
 
 					const sysBlock = sysPre + systemPromptModeText + sysSuf;
 					return [{type: 'user', content: sysBlock}, ...p];
@@ -6779,8 +6793,8 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	const [ttsVolume, setTTSVolume] = usePersistentState('ttsVolume', 1);
 	const [ttsSpeakInputs, setTTSSpeakInputs] = usePersistentState('ttsSpeakInputs', true);
 	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
-	const [editorFont, setEditorFont] = usePersistentState('editorFont', 'Theme Default');
-	const [uiFont, setUiFont] = usePersistentState('uiFont', 'Theme Default');
+	const [editorFont, setEditorFont] = usePersistentState('editorFont', 'Default');
+	const [uiFont, setUiFont] = usePersistentState('uiFont', 'Default');
 
 	const handleExportDB = async () => {
 		try {
@@ -7726,6 +7740,49 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 		setUndoHovered(false);
 		return true;
 	}
+
+
+	const applyChatTemplate = () => {
+		if (hideChatTemplates) {
+			alert("Cannot apply chat template while they are hidden. Please show chat templates first.");
+			return;
+		}
+
+		const promptString = promptArea.current.value;
+		if (!promptString.trim()) return;
+
+		let bestMessages = [];
+		for (const templateName of Object.keys(templates)) {
+			const messages = convertChatToJSON(promptString, templates[templateName]);
+			if (messages.length > bestMessages.length) {
+				bestMessages = messages;
+			}
+		}
+
+		if (bestMessages.length === 0) {
+			alert("Could not detect any chat template in the current text.");
+			return;
+		}
+
+		const newTemplate = templates[selectedTemplate];
+		if (!newTemplate) return;
+
+		const sysPre = newTemplate.sysPre?.replace(/\\n/g, '\n') || "";
+		const sysSuf = newTemplate.sysSuf?.replace(/\\n/g, '\n') || "";
+		const instPre = newTemplate.instPre?.replace(/\\n/g, '\n') || "";
+		const instSuf = newTemplate.instSuf?.replace(/\\n/g, '\n') || "";
+
+		let newPrompt = "";
+		for (const msg of bestMessages) {
+			if (msg.role === 'system') newPrompt += sysPre + msg.content + sysSuf;
+			else if (msg.role === 'user') newPrompt += instPre + msg.content + instSuf;
+			else if (msg.role === 'assistant') newPrompt += msg.content;
+		}
+
+		const elem = promptArea.current;
+		elem.value = newPrompt;
+		onInput({ target: elem });
+	};
 
 	const [triggerPredict, setTriggerPredict] = useState(false);
 	const [restartedPredict, setRestartedPredict] = useState(false);
@@ -9025,6 +9082,13 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 						<${SVG_Settings} style=${{ 'width':'.95em','transform':'translate(-50%, -45%)' }}/>
 					</button>
 					<button
+						title="Apply Chat Template"
+						disabled=${!!cancel}
+						class="symbol-button"
+						onClick=${applyChatTemplate}>
+						<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+					</button>
+					<button
 						title="Insert System Prompt Template"
 						disabled=${!!cancel}
 						class="symbol-button"
@@ -9428,7 +9492,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 		<${EditorPreferencesModal}
 			isOpen=${modalState.prompt}
 			closeModal=${() => closeModal("prompt")}>
-			<${InputSlider} label="Font size multiplier" min="0.5" max="5" step="0.01" strict="1"
+			<${InputSlider} label="Font size multiplier" min="0.5" max="5" step="0.01" strict="1" snap=${0.5}
 				value=${fontSizeMultiplier} onValueChange=${setFontSizeMultiplier}/>
 			<${Checkbox} label="Enable spell checking"
 				value=${spellCheck} onValueChange=${setSpellCheck}/>
@@ -9577,7 +9641,8 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 			templates=${templates}
 			setTemplates=${setTemplates}
 			templateStorage=${templateStorage}
-			cancel=${cancel}/>
+			cancel=${cancel}
+			applyChatTemplate=${applyChatTemplate}/>
 
 		<${GrammarModal}
 			isOpen=${modalState.grammar}
