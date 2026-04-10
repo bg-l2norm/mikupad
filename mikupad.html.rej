@@ -1,0 +1,7 @@
+--- mikupad.html
++++ mikupad.html
+@@ -6778,3 +6778,4 @@
+	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
+-	const [currentFont, setCurrentFont] = usePersistentState('currentFont', 'Theme Default');
++	const [editorFont, setEditorFont] = usePersistentState('editorFont', 'Theme Default');
++	const [uiFont, setUiFont] = usePersistentState('uiFont', 'Theme Default');

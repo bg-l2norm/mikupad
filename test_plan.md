@@ -1,0 +1,5 @@
+1. **Fix default editor font inheritance:** In `#prompt-area, #prompt-overlay` and `#markdown-preview`, update the CSS rule `font-family: var(--editor-font-family, var(--main-font-family, serif));` to `font-family: var(--editor-font-family, inherit);`. This ensures the editor font falls back to the UI font / theme font when "Theme Default" is selected.
+2. **Update custom themes to use the new UI font variable:** The `defaultThemes` object in `mikupad.html` contains CSS strings with hardcoded `font-family: var(--main-font-family, ...);`. Update all occurrences of `--main-font-family` in these theme strings to `--ui-font-family`.
+3. **Verify changes visually:** Start the local server again, use playwright to visually verify the fonts apply correctly under different themes (e.g. Monospace Dark and NockoffAI), take screenshots, and run `frontend_verification_complete`.
+4. **Initiate memory recording:** Complete the pre-commit steps by calling `initiate_memory_recording`.
+5. **Submit the change:** Commit the changes with a descriptive message and submit.

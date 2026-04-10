@@ -86,7 +86,7 @@ html {
 	--color-bg-disabled-1: var(--color-base-60);
 	--color-bg-disabled-2: var(--color-base-20);
 
-	font-family: var(--ui-font-family, var(--main-font-family, serif));
+	font-family: var(--main-font-family, serif);
 	font-size: 16px;
 	min-height: 100%;
 	display: flex;
@@ -140,7 +140,6 @@ body {
 	margin: 0;
 	scrollbar-gutter: stable;
 	font: inherit;
-	font-family: var(--editor-font-family, inherit);
 	box-sizing: content-box;
 	text-size-adjust: 100%;
 	-webkit-text-size-adjust: 100%;
@@ -1314,7 +1313,7 @@ button.completing {
 	text-size-adjust: 100%;
 	-webkit-text-size-adjust: 100%;
 	-moz-text-size-adjust: 100%;
-    font-family: var(--editor-font-family, inherit);
+    font-family: var(--main-font-family, serif);
     word-wrap: break-word;
     overflow-y: scroll;
 	height: calc(100vh);
@@ -6137,7 +6136,7 @@ html.monospace-dark {
 	--color-bg-disabled-1: var(--color-base-20);
 	--color-bg-disabled-2: var(--color-base-10);
 
-	font-family: var(--ui-font-family, var(--main-font-family, monospace));
+	font-family: var(--main-font-family, monospace);
 	font-size: 15px;
 
 	accent-color: var(--color-base-30);
@@ -6209,7 +6208,7 @@ html.nockoffAI {
 	--color-bg-disabled-1: #161833;
 	--color-bg-disabled-2: #161833;
 
-	font-family: var(--ui-font-family, var(--main-font-family, "Source Sans Pro", "Helvetica Neue", sans-serif));
+	font-family: var(--main-font-family, "Source Sans Pro", "Helvetica Neue", sans-serif);
 	font-size: 15.5px;
 
 	accent-color: var(--color-base-30);
@@ -6312,7 +6311,7 @@ html.ereader {
 	--color-base-100: #fff;
 	--color-miku: #08f;
 
-	font-family: var(--ui-font-family, var(--main-font-family, monospace));
+	font-family: var(--main-font-family, monospace);
 	font-size: 16px;
 
 	background: var(--color-base-10);
@@ -6779,8 +6778,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	const [ttsVolume, setTTSVolume] = usePersistentState('ttsVolume', 1);
 	const [ttsSpeakInputs, setTTSSpeakInputs] = usePersistentState('ttsSpeakInputs', true);
 	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
-	const [editorFont, setEditorFont] = usePersistentState('editorFont', 'Theme Default');
-	const [uiFont, setUiFont] = usePersistentState('uiFont', 'Theme Default');
+	const [currentFont, setCurrentFont] = usePersistentState('currentFont', 'Theme Default');
 
 	const handleExportDB = async () => {
 		try {
@@ -7773,52 +7771,30 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	}, [fontSizeMultiplier]);
 
 	useLayoutEffect(() => {
-		const editorFontInfo = availableFonts[editorFont];
-		if (editorFontInfo) {
-			let link = document.getElementById('dynamic-editor-font-link');
-			if (editorFontInfo.url) {
-				if (!link) {
-					link = document.createElement('link');
-					link.id = 'dynamic-editor-font-link';
-					link.rel = 'stylesheet';
-					document.head.appendChild(link);
-				}
-				if (link.href !== editorFontInfo.url) {
-					link.href = editorFontInfo.url;
-				}
-			} else if (link) {
-				link.remove();
+		const fontInfo = availableFonts[currentFont];
+		if (!fontInfo) return;
+
+		let link = document.getElementById('dynamic-font-link');
+		if (fontInfo.url) {
+			if (!link) {
+				link = document.createElement('link');
+				link.id = 'dynamic-font-link';
+				link.rel = 'stylesheet';
+				document.head.appendChild(link);
 			}
-			if (editorFontInfo.cssValue) {
-				document.documentElement.style.setProperty('--editor-font-family', editorFontInfo.cssValue);
-			} else {
-				document.documentElement.style.removeProperty('--editor-font-family');
+			if (link.href !== fontInfo.url) {
+				link.href = fontInfo.url;
 			}
+		} else if (link) {
+			link.remove();
 		}
 
-		const uiFontInfo = availableFonts[uiFont];
-		if (uiFontInfo) {
-			let link = document.getElementById('dynamic-ui-font-link');
-			if (uiFontInfo.url) {
-				if (!link) {
-					link = document.createElement('link');
-					link.id = 'dynamic-ui-font-link';
-					link.rel = 'stylesheet';
-					document.head.appendChild(link);
-				}
-				if (link.href !== uiFontInfo.url) {
-					link.href = uiFontInfo.url;
-				}
-			} else if (link) {
-				link.remove();
-			}
-			if (uiFontInfo.cssValue) {
-				document.documentElement.style.setProperty('--ui-font-family', uiFontInfo.cssValue);
-			} else {
-				document.documentElement.style.removeProperty('--ui-font-family');
-			}
+		if (fontInfo.cssValue) {
+			document.documentElement.style.setProperty('--main-font-family', fontInfo.cssValue);
+		} else {
+			document.documentElement.style.removeProperty('--main-font-family');
 		}
-	}, [editorFont, uiFont]);
+	}, [currentFont]);
 
 
 	useLayoutEffect(() => {
@@ -8925,18 +8901,6 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 					<${SVG_Settings} style=${{ 'width':'.95em','transform':'translate(-50%, -45%)' }}/>
 				</button>
 			</div>
-			<div className="buttons instructTemplateSidebar theme-selector">
-				<${SelectBox}
-					label="UI Font"
-					value=${uiFont}
-					onValueChange=${setUiFont}
-					options=${Object.keys(availableFonts).map(name => ({ name, value: name }))}/>
-				<${SelectBox}
-					label="Editor Font"
-					value=${editorFont}
-					onValueChange=${setEditorFont}
-					options=${Object.keys(availableFonts).map(name => ({ name, value: name }))}/>
-			</div>
 			<div class="horz-separator"/>
 			<${CollapsibleGroup} label="Sessions">
 				<${Sessions} sessionStorage=${sessionStorage} disabled=${!!cancel}/>
@@ -9405,14 +9369,12 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 					onClick=${() => {
 						toggleModal("settings");
 						if (modalState.settings) {
-							for (const themeSelector of document.getElementsByClassName("theme-selector"))
-								themeSelector.classList.remove("visible");
+							document.getElementsByClassName("theme-selector")[0].classList.remove("visible");
 							document.getElementsByClassName("horz-separator")[0].classList.remove("visible");
 							for (const collapseGroup of document.getElementsByClassName("collapsible-group"))
 								collapseGroup.classList.remove("visible");
 						} else {
-							for (const themeSelector of document.getElementsByClassName("theme-selector"))
-								themeSelector.classList.add("visible");
+							document.getElementsByClassName("theme-selector")[0].classList.add("visible");
 							document.getElementsByClassName("horz-separator")[0].classList.add("visible");
 							for (const collapseGroup of document.getElementsByClassName("collapsible-group"))
 								collapseGroup.classList.add("visible");
@@ -9428,6 +9390,11 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 		<${EditorPreferencesModal}
 			isOpen=${modalState.prompt}
 			closeModal=${() => closeModal("prompt")}>
+			<${SelectBox}
+				label="Font"
+				value=${currentFont}
+				onValueChange=${setCurrentFont}
+				options=${Object.keys(availableFonts).map(name => ({ name, value: name }))}/>
 			<${InputSlider} label="Font size multiplier" min="0.5" max="5" step="0.01" strict="1"
 				value=${fontSizeMultiplier} onValueChange=${setFontSizeMultiplier}/>
 			<${Checkbox} label="Enable spell checking"
