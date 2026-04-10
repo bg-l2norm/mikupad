@@ -3096,6 +3096,36 @@ const SVG_Stop = ({ ...props }) => {
 		<path fill="var(--color-light)" fillRule="evenodd" d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z"/>
 	</${SVG}>
 `};
+const SVG_HideTemplates = ({...props}) => {
+	return html`
+	<${SVG}
+		...${props}
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round">
+		<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+		<line x1="1" y1="1" x2="23" y2="23"></line>
+	</${SVG}>
+`};
+
+const SVG_ShowTemplates = ({...props}) => {
+	return html`
+	<${SVG}
+		...${props}
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round">
+		<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+		<circle cx="12" cy="12" r="3"></circle>
+	</${SVG}>
+`};
+
 const SVG_SplitView = ({ ...props }) => {
   return html`
     <${SVG}
@@ -3173,7 +3203,7 @@ function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryTokensChang
 						readOnly=${!!cancel} value=${memoryTokens.suffix} onValueChange=${(value) => handleMemoryTokensChange("suffix", value)}/>
 				</div>
 				<div class="relative">
-					<textarea
+			<textarea
 						readOnly=${!!cancel}
 						placeholder="Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit."
 						defaultValue=${memoryTokens.text}
@@ -6565,6 +6595,60 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	const [spellCheck, setSpellCheck] = usePersistentState('spellCheck', false);
 	const [attachSidebar, setAttachSidebar] = usePersistentState('attachSidebar', false);
 	const [showProbsMode, setShowProbsMode] = usePersistentState('showProbsMode', 0);
+	const [hideChatTemplates, setHideChatTemplates] = useSessionState('hideChatTemplates', false);
+	const [systemPromptModeText, setSystemPromptModeText] = useSessionState('systemPromptModeText', "");
+
+	const prevHideChatTemplates = useRef(hideChatTemplates);
+	useEffect(() => {
+		if (prevHideChatTemplates.current !== hideChatTemplates) {
+			prevHideChatTemplates.current = hideChatTemplates;
+			if (hideChatTemplates) {
+				setPromptChunks(p => {
+					const sysPre = templates[selectedTemplate]?.sysPre?.replace(/\\n/g, '\n');
+					const sysSuf = templates[selectedTemplate]?.sysSuf?.replace(/\\n/g, '\n');
+					if (!sysPre || !sysSuf) return p;
+
+					let fullText = p.map(c => c.content).join('');
+					if (fullText.startsWith(sysPre)) {
+						const sysSufIndex = fullText.indexOf(sysSuf, sysPre.length);
+						if (sysSufIndex !== -1) {
+							const extracted = fullText.slice(sysPre.length, sysSufIndex);
+							setSystemPromptModeText(extracted);
+
+							const toRemove = sysPre.length + extracted.length + sysSuf.length;
+							let removed = 0;
+							let newChunks = [];
+							for (let chunk of p) {
+								if (removed < toRemove) {
+									if (removed + chunk.content.length <= toRemove) {
+										removed += chunk.content.length;
+									} else {
+										const remaining = toRemove - removed;
+										newChunks.push({ ...chunk, content: chunk.content.slice(remaining) });
+										removed = toRemove;
+									}
+								} else {
+									newChunks.push(chunk);
+								}
+							}
+							return newChunks;
+						}
+					}
+					return p;
+				});
+			} else {
+				setPromptChunks(p => {
+					if (!systemPromptModeText) return p;
+					const sysPre = templates[selectedTemplate]?.sysPre?.replace(/\\n/g, '\n');
+					const sysSuf = templates[selectedTemplate]?.sysSuf?.replace(/\\n/g, '\n');
+					if (!sysPre || !sysSuf) return p;
+
+					const sysBlock = sysPre + systemPromptModeText + sysSuf;
+					return [{type: 'user', content: sysBlock}, ...p];
+				});
+			}
+		}
+	}, [hideChatTemplates, selectedTemplate, templates]);
 	const [__highlightGenTokens, __1] = usePersistentState('highlightGenTokens', true); // obsolete!
 	const [tokenHighlightMode, setTokenHighlightMode] = usePersistentState('tokenHighlightMode', __highlightGenTokens ? 0 : -1);
 	const [__colorizePerplexity, __2] = usePersistentState('colorizePerplexity', false); // obsolete!
@@ -6927,6 +7011,62 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 
 
 	const promptText = useMemo(() => joinPrompt(promptChunks), [promptChunks]);
+	const { displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = useMemo(() => {
+		if (!hideChatTemplates) {
+			return { displayPromptChunks: promptChunks, cleanPromptText: promptText, origToClean: null, cleanToOrig: null };
+		}
+
+		const affixes = [
+			templates[selectedTemplate]?.sysPre,
+			templates[selectedTemplate]?.sysSuf,
+			templates[selectedTemplate]?.instPre,
+			templates[selectedTemplate]?.instSuf
+		].filter(x => x).map(x => x.replace(/\\n/g, '\n')).sort((a, b) => b.length - a.length);
+
+		let cText = "";
+		let cToO = [];
+		let oToC = [];
+
+		let chunks = [];
+		let origI = 0;
+
+		for (let chunk of promptChunks) {
+			let origContent = chunk.content;
+			let cContent = "";
+
+			let i = 0;
+			while (i < origContent.length) {
+				let matchedAffix = null;
+				for (const affix of affixes) {
+					if (origContent.startsWith(affix, i)) {
+						matchedAffix = affix;
+						break;
+					}
+				}
+				if (matchedAffix) {
+					for (let j = 0; j < matchedAffix.length; j++) {
+						oToC.push(cText.length + cContent.length);
+					}
+					i += matchedAffix.length;
+				} else {
+					cToO.push(origI + i);
+					oToC.push(cText.length + cContent.length);
+					cContent += origContent[i];
+					i++;
+				}
+			}
+
+			origI += origContent.length;
+			cText += cContent;
+			chunks.push({ ...chunk, content: cContent });
+		}
+
+		cToO.push(origI);
+		oToC.push(cText.length);
+
+		return { displayPromptChunks: chunks, cleanPromptText: cText, origToClean: oToC, cleanToOrig: cToO };
+	}, [promptChunks, promptText, hideChatTemplates, templates, selectedTemplate]);
+
 
 	const { modifiedPromptText, fimPromptInfo } = useMemo(() => {
 		if (cancel)
@@ -7112,8 +7252,16 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	}, [contextLength, modifiedPromptText, memoryTokens, authorNoteTokens, authorNoteDepth, assembledWorldInfo, worldInfo.prefix, worldInfo.suffix]);
 
 	const finalPromptText = useMemo(() => {
-		return replacePlaceholders(additionalContextPrompt, templateReplacements);
-	}, [additionalContextPrompt, templates, selectedTemplate]);
+		let text = replacePlaceholders(additionalContextPrompt, templateReplacements);
+		if (hideChatTemplates && systemPromptModeText) {
+			const sysPre = templates[selectedTemplate]?.sysPre?.replace(/\\n/g, '\n');
+			const sysSuf = templates[selectedTemplate]?.sysSuf?.replace(/\\n/g, '\n');
+			if (sysPre && sysSuf) {
+				text = sysPre + systemPromptModeText + sysSuf + text;
+			}
+		}
+		return text;
+	}, [additionalContextPrompt, templates, selectedTemplate, hideChatTemplates, systemPromptModeText]);
 
 	// predicts the prompt preview
 	useEffect(() => {
@@ -7823,18 +7971,18 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	// selection or cursor position during prediction
 	useLayoutEffect(() => {
 		const elem = promptArea.current;
-		if (elem.value === promptText) {
+		if (elem.value === (hideChatTemplates ? cleanPromptText : promptText)) {
 			return;
-		} else if (elem.value.length && promptText.startsWith(elem.value)) {
+		} else if (elem.value.length && (hideChatTemplates ? cleanPromptText : promptText).startsWith(elem.value)) {
 			const isTextSelected = elem.selectionStart !== elem.selectionEnd;
 			const oldHeight = elem.scrollHeight;
 			const atBottom = (elem.scrollTarget ?? elem.scrollTop) + elem.clientHeight + 1 > oldHeight;
 			const oldLen = elem.value.length;
 			// disable preserveCursorPosition in chatMode
 			if ( (!isTextSelected && !preserveCursorPosition) || (chatMode || useChatAPI)) {
-				elem.value = promptText;
+				elem.value = hideChatTemplates ? cleanPromptText : promptText;
 			} else {
-				elem.setRangeText(promptText.slice(oldLen), oldLen, oldLen, 'preserve');
+				elem.setRangeText((hideChatTemplates ? cleanPromptText : promptText).slice(oldLen), oldLen, oldLen, 'preserve');
 			}
 			const newHeight = elem.scrollHeight;
 			if (atBottom && oldHeight !== newHeight) {
@@ -7849,7 +7997,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 				});
 			}
 		} else {
-			elem.value = promptText;
+			elem.value = hideChatTemplates ? cleanPromptText : promptText;
 		}
 	}, [promptText]);
 
@@ -8142,13 +8290,33 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	}, []);
 
 	function onInput({ target }) {
-		if (showPromptPreview) {
-			setPromptPreviewChunks([]);
-		}
-		setPromptChunks(oldPrompt => {
-			const start = [];
-			const end = [];
-			let newValue = target.value;
+			if (showPromptPreview) {
+				setPromptPreviewChunks([]);
+			}
+
+			let nv = target.value;
+			if (hideChatTemplates && cleanToOrig) {
+				let startCount = 0;
+				while (startCount < cleanPromptText.length && startCount < nv.length && cleanPromptText[startCount] === nv[startCount]) {
+					startCount++;
+				}
+				let oldEnd = cleanPromptText.length;
+				let newEnd = nv.length;
+				while (oldEnd > startCount && newEnd > startCount && cleanPromptText[oldEnd - 1] === nv[newEnd - 1]) {
+					oldEnd--;
+					newEnd--;
+				}
+				const inserted = nv.slice(startCount, newEnd);
+				const origStart = cleanToOrig[startCount];
+				const origEnd = cleanToOrig[oldEnd];
+
+				nv = promptText.slice(0, origStart) + inserted + promptText.slice(origEnd);
+			}
+
+			setPromptChunks(oldPrompt => {
+				const start = [];
+				const end = [];
+				let newValue = nv;
 
 			let i = 0;
 			for (; i < oldPrompt.length; i++) {
@@ -8571,6 +8739,14 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 				onClick=${() => setShowMarkdownPreview(p => !p)}>
 				<${SVG_SplitView}/>
 			</button>
+			${hideChatTemplates && html`<textarea
+				id="system-prompt-area"
+				className="wi-textarea"
+				style=${{ 'margin-bottom': '1em', 'min-height': '6em', 'flex': 'none' }}
+				placeholder="System Prompt"
+				value=${systemPromptModeText}
+				readOnly=${!!cancel}
+				onInput=${e => setSystemPromptModeText(e.target.value)} />`}
 			<textarea
 				ref=${promptArea}
 				readOnly=${!!cancel}
@@ -8585,7 +8761,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 				aria-hidden
 				...${showPromptPreview && { style: { 'padding-bottom': promptPreviewElement.current?.offsetHeight ?? '0px' } }}>
 				${tokenHighlightMode !== -1 ? html`
-					${promptChunks.map((chunk, i) => {
+					${(hideChatTemplates ? displayPromptChunks : promptChunks).map((chunk, i) => {
 						const getRatioColor = (ratio) => {
 							const sRatio = Math.max(0, Math.min(1, ratio));
 							if (sRatio <= 0.5) {
@@ -8616,7 +8792,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 								data-promptchunk=${i}
 								style=${bgColor ? { '--bg-color': bgColor } : {}}
 								className=${`${(tokenHighlightMode === 1 && !isCurrent) || chunk.type === 'user' ? 'user' : 'machine'} ${isCurrent ? 'current' : ''} ${isNextUndo ? 'erase' : ''}`}>
-								${(chunk.content === '\n' ? ' \n' : chunk.content) + (i === promptChunks.length - 1 && chunk.content.endsWith('\n') && promptPreviewChunks.length === 0 ? '\u00a0' : '')}
+								${(chunk.content === '\n' ? ' \n' : chunk.content) + (i === (hideChatTemplates ? displayPromptChunks : promptChunks).length - 1 && chunk.content.endsWith('\n') && promptPreviewChunks.length === 0 ? '\u00a0' : '')}
 							</span>`;
 					})}
 					${(showPromptPreview && promptPreviewChunks.length) ? html`
@@ -8628,7 +8804,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 				closeWidget=${() => closeModal("searchAndReplace")}
 				id="searchAndReplace"
 				promptArea=${promptArea}
-				promptText=${promptText}
+				promptText=${hideChatTemplates ? cleanPromptText : promptText}
 				cancel=${cancel}/>
 		</div>
 		<div id="markdown-preview" ref=${markdownPreviewRef} style=${{ 'margin-bottom': isMobile ? sidebarHeight + 'px' : 0 }}>
@@ -8767,6 +8943,16 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 						class="symbol-button"
 						onClick=${() => insertTemplate("inst")}>
 						<${SVG_instTemplate} style=${{ 'height':'1.05em','transform':'translate(-50%, -60%)' }}/>
+					</button>
+					<button
+						title="${ hideChatTemplates ? "Show Chat Templates" : "Hide Chat Templates"}"
+						disabled=${!!cancel}
+						class="symbol-button"
+						onClick=${() => setHideChatTemplates( (prevState) => !prevState)}>
+						${ hideChatTemplates ?
+							html`<${SVG_ShowTemplates} style=${{ 'width':'1.1em' }} />` :
+							html`<${SVG_HideTemplates} style=${{ 'width':'1.1em' }} />`
+						}
 					</button>
 					<button
 						title="Toggle Chat Mode ${ chatMode ? "Off" : "On"}"
