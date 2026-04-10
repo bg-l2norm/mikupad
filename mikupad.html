@@ -31,6 +31,22 @@
 </script>
 <style>
 
+::view-transition-group(root) {
+	animation-duration: 0.5s;
+	animation-timing-function: ease-in-out;
+}
+::view-transition-new(root) {
+	animation-name: reveal-theme;
+}
+::view-transition-old(root) {
+	animation: none;
+	z-index: -1;
+}
+@keyframes reveal-theme {
+	from { clip-path: circle(0% at center); }
+	to { clip-path: circle(150% at center); }
+}
+
 html {
 	--color-miku: #009bb3;
 	--color-base-0: oklch(0.20 0.02 60);
@@ -208,6 +224,9 @@ body {
 	overflow: hidden;
 }
 
+#prompt-overlay > .machine {
+	transition: background-color 0.15s ease-in-out, outline-color 0.15s ease-in-out;
+}
 #prompt-container:hover #prompt-overlay > .machine {
 	background: color-mix(in srgb, var(--bg-color, var(--color-miku)) 10%, transparent);
 }
@@ -260,6 +279,7 @@ body {
 	flex-direction: column;
 	flex: none;
 	font-size: calc(1rem * var(--font-size-multiplier));
+	transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
 }
 #probs > button.current {
 	background: var(--color-bg-highlight-1);
@@ -368,7 +388,17 @@ body {
 }
 
 
+@keyframes fadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+@keyframes slideUp {
+	from { transform: translateY(20px) scale(0.98); opacity: 0; }
+	to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
 .modal-overlay {
+	animation: fadeIn 0.15s ease-out;
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -389,6 +419,7 @@ body {
 }
 
 .modal {
+	animation: slideUp 0.15s ease-out;
 	color: var(--color-text-ui);
 	position: relative;
 	background: var(--color-bg-ui-1);
@@ -616,6 +647,7 @@ body {
 	border-radius: 4px;
 	gap: 1em;
 	user-select: none;
+	transition: background-color 0.15s ease-in-out;
 }
 .horde-model-entry:hover {
 	background-color: var(--color-bg-highlight-3);
@@ -796,11 +828,17 @@ body {
 	border-radius: 50%;
 	cursor: pointer;
 	margin-top: -2px;
-	transition: transform 0.15s ease-in-out;
+	transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.InputSlider-container input[type="range"]:hover::-webkit-slider-thumb {
+	transform: scale(1.1);
+	box-shadow: 0 0 0 6px var(--color-bg-highlight-2);
 }
 
 .InputSlider-container input[type="range"]:active::-webkit-slider-thumb {
 	transform: scale(1.25);
+	box-shadow: 0 0 0 10px var(--color-bg-highlight-1);
 }
 
 .InputSlider-container input[type="range"]::-moz-range-track {
@@ -815,11 +853,17 @@ body {
 	background: var(--color-light);
 	border-radius: 50%;
 	cursor: pointer;
-	transition: transform 0.15s ease-in-out;
+	transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.InputSlider-container input[type="range"]:hover::-moz-range-thumb {
+	transform: scale(1.1);
+	box-shadow: 0 0 0 6px var(--color-bg-highlight-2);
 }
 
 .InputSlider-container input[type="range"]:active::-moz-range-thumb {
 	transform: scale(1.25);
+	box-shadow: 0 0 0 10px var(--color-bg-highlight-1);
 }
 
 .InputSlider-container input[type="range"]::-ms-track {
@@ -1176,6 +1220,7 @@ button.completing {
 }
 
 .floating-menu {
+	animation: fadeIn 0.15s ease-out;
 	position: absolute;
 	top: 30px;
 	right: 0px;
@@ -1191,6 +1236,7 @@ button.completing {
 }
 
 .EditorContextMenu {
+	animation: fadeIn 0.15s ease-out;
 	display: none;
 	position: absolute;
 	background: var(--color-bg-popover-1);
@@ -2520,13 +2566,10 @@ function CollapsibleGroup({ label, stateLabel, menu, expanded, children }) {
 		}, [isMenuVisible]);
 	}
 
-	const expandSvg = html`<${SVG_ArrowDown}/>`;
-	const collapseSvg = html`<${SVG_ArrowUp}/>`;
-
 	return html`
 		<div className="collapsible-group" style=${{'position': 'relative'}}>
 			<div className="collapsible-header" onClick=${() => setIsCollapsed(!isCollapsed)}>
-				${isCollapsed ? expandSvg : collapseSvg}
+				<${SVG_ArrowUp} style=${{ 'transform': isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.15s ease-in-out' }}/>
 				${label}
 				<div class="flex-separator"></div>
 				${menu && html`
@@ -7574,23 +7617,31 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 	}, [promptAreaWidth]);
 	
 	useLayoutEffect(() => {
-		for (const theme in Object.values(allThemes)) {
-			document.documentElement.classList.remove(theme.className);
-		}
+		const applyTheme = () => {
+			for (const theme in Object.values(allThemes)) {
+				document.documentElement.classList.remove(theme.className);
+			}
 
-        const theme = allThemes[currentThemeName];
-        if (theme && theme.className !== 'default') {
-            document.documentElement.classList.add(theme.className);
-            const styleElement = document.getElementById('dynamic-theme-style');
-            if (styleElement) {
-                styleElement.textContent = theme.css;
-            }
-        } else {
-            const styleElement = document.getElementById('dynamic-theme-style');
-            if (styleElement) {
-                styleElement.textContent = '';
-            }
-        }
+	        const theme = allThemes[currentThemeName];
+	        if (theme && theme.className !== 'default') {
+	            document.documentElement.classList.add(theme.className);
+	            const styleElement = document.getElementById('dynamic-theme-style');
+	            if (styleElement) {
+	                styleElement.textContent = theme.css;
+	            }
+	        } else {
+	            const styleElement = document.getElementById('dynamic-theme-style');
+	            if (styleElement) {
+	                styleElement.textContent = '';
+	            }
+	        }
+		};
+
+		if (document.startViewTransition) {
+			document.startViewTransition(applyTheme);
+		} else {
+			applyTheme();
+		}
     }, [currentThemeName, allThemes]);
 
 	useEffect(() => {
