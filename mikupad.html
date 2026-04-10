@@ -5048,8 +5048,6 @@ function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea,
 	}
 
 	function handleSearchAndReplace(mode,search,flags,replace) {
-		// TODO
-		// Add this to undo/redo
 		setSearchAndReplaceError(undefined)
 		if (!search)
 			return
@@ -5075,16 +5073,18 @@ function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea,
 
 	function plaintextReplace(search,replace,elem) {
 		// need to figure out a smart way to keep the cursor position
-		elem.value = elem.value.replaceAll(search,replace)
-		const event = new Event('input', { bubbles: true });
-		elem.dispatchEvent(event);
+		const newVal = elem.value.replaceAll(search,replace);
+		elem.focus();
+		elem.select();
+		document.execCommand('insertText', false, newVal);
 	}
 	function regexReplace(search,flags,replace,elem) {
 		try {
 			let re = new RegExp(String.raw`${search}`, String.raw`${flags ?? ""}`);
-			elem.value = elem.value.replace(re,replace)
-			const event = new Event('input', { bubbles: true });
-			elem.dispatchEvent(event);
+			const newVal = elem.value.replace(re,replace);
+			elem.focus();
+			elem.select();
+			document.execCommand('insertText', false, newVal);
 		}
 		catch (e) {
 			reportError(e);
