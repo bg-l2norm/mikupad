@@ -7999,7 +7999,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 		} else {
 			elem.value = hideChatTemplates ? cleanPromptText : promptText;
 		}
-	}, [promptText]);
+	}, [promptText, hideChatTemplates, cleanPromptText]);
 
 	useLayoutEffect(() => {
 		const elem = promptArea.current;
