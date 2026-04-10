@@ -8310,7 +8310,17 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 				const origStart = cleanToOrig[startCount];
 				const origEnd = cleanToOrig[oldEnd];
 
-				nv = promptText.slice(0, origStart) + inserted + promptText.slice(origEnd);
+				let affixesInDeleted = "";
+				let cleanIndex = startCount;
+				for (let k = origStart; k < origEnd; k++) {
+					if (cleanIndex < oldEnd && cleanToOrig[cleanIndex] === k) {
+						cleanIndex++;
+					} else {
+						affixesInDeleted += promptText[k];
+					}
+				}
+
+				nv = promptText.slice(0, origStart) + inserted + affixesInDeleted + promptText.slice(origEnd);
 			}
 
 			setPromptChunks(oldPrompt => {
