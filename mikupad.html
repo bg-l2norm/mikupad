@@ -717,6 +717,11 @@ body {
 	color: inherit;
 	background: var(--color-bg-input-1);
 	flex: none;
+	transition: background-color 0.15s ease-in-out, outline 0.15s ease-in-out;
+}
+
+.InputBox > div > input:not(:read-only):hover, .SelectBox > select:not(:disabled):hover, .TextArea > textarea:not(:read-only):hover {
+	background: var(--color-bg-highlight-1);
 }
 
 .InputBox > div > input:read-only {
@@ -724,7 +729,7 @@ body {
 	opacity: 0.8;
 }
 
-.InputBox > div > input:focus-visible {
+.InputBox > div > input:focus-visible, .SelectBox > select:focus-visible, .TextArea > textarea:focus-visible {
 	outline: 1px solid var(--color-base-0);
 }
 .SelectBox > select:disabled {
@@ -791,6 +796,11 @@ body {
 	border-radius: 50%;
 	cursor: pointer;
 	margin-top: -2px;
+	transition: transform 0.15s ease-in-out;
+}
+
+.InputSlider-container input[type="range"]:active::-webkit-slider-thumb {
+	transform: scale(1.25);
 }
 
 .InputSlider-container input[type="range"]::-moz-range-track {
@@ -805,6 +815,11 @@ body {
 	background: var(--color-light);
 	border-radius: 50%;
 	cursor: pointer;
+	transition: transform 0.15s ease-in-out;
+}
+
+.InputSlider-container input[type="range"]:active::-moz-range-thumb {
+	transform: scale(1.25);
 }
 
 .InputSlider-container input[type="range"]::-ms-track {
@@ -900,6 +915,7 @@ button {
 	color: inherit;
 	background: var(--color-bg-input-1);
 	border-radius: 2px;
+	transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out, opacity 0.15s ease-in-out;
 }
 button.textAreaSettings {
 	all: unset;
@@ -930,6 +946,7 @@ button:hover {
 }
 button:active {
 	background: var(--color-bg-highlight-2);
+	transform: scale(0.96);
 }
 button:disabled {
 	background: var(--color-bg-disabled-1);
@@ -994,6 +1011,10 @@ button.completing {
 	color: inherit;
 	background-color: var(--color-bg-input-1);
 	border-radius: 2px;
+	transition: background-color 0.15s ease-in-out;
+}
+.collapsible-header:hover {
+	background-color: var(--color-bg-highlight-1);
 }
 .collapsible-header svg {
 	margin-right: 5px;
@@ -1048,6 +1069,7 @@ button.completing {
 	display: flex;
 	word-break: break-word;
 	user-select: none;
+	transition: background-color 0.15s ease-in-out;
 }
 .Session:hover {
 	background-color: var(--color-bg-highlight-3);
@@ -1192,12 +1214,15 @@ button.completing {
 .MenuItem {
 	padding: 10px 15px;
 	cursor: pointer;
-	transition: background-color 0.2s ease-in-out;
+	transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out;
 	font-size: 14px;
 	border-radius: 0px;
 }
 .MenuItem:not(.disabled):hover {
 	background: var(--color-bg-highlight-2) !important;
+}
+.MenuItem:not(.disabled):active {
+	transform: scale(0.98);
 }
 
 .MenuItem.disabled {
