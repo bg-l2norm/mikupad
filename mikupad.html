@@ -8551,7 +8551,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 					try {
 						await sessionStorage.dbAdapter.init();
 						setSessionEndpointError(undefined);
-						clearTimeout(sessionReconnectTimer.current);
+						clearInterval(sessionReconnectTimer.current);
 						sessionReconnectTimer.current = undefined;
 					} catch (e) {
 						reportError(e);
