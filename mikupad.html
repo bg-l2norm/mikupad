@@ -2655,8 +2655,8 @@ function Sessions({ sessionStorage, disabled }) {
 								autoFocus
 							/>
 							<div className="flex-separator"></div>
-							<button onClick=${(e) => (createSession(), e.stopPropagation())}><${SVG_Confirm}/></button>
-							<button onClick=${(e) => (setIsCreating(false), e.stopPropagation())}><${SVG_Cancel}/></button>
+							<button aria-label="Confirm creation" onClick=${(e) => (createSession(), e.stopPropagation())}><${SVG_Confirm}/></button>
+							<button aria-label="Cancel creation" onClick=${(e) => (setIsCreating(false), e.stopPropagation())}><${SVG_Cancel}/></button>
 						</a>
 					</li>
 				`}
@@ -2674,16 +2674,18 @@ function Sessions({ sessionStorage, disabled }) {
 									autoFocus
 								/>
 								<div className="flex-separator"></div>
-								<button onClick=${(e) => (renameSession(+sessionId), e.stopPropagation())}><${SVG_Confirm}/></button>
-								<button onClick=${(e) => (setRenamingId(undefined), e.stopPropagation())}><${SVG_Cancel}/></button>
+								<button aria-label="Confirm rename" onClick=${(e) => (renameSession(+sessionId), e.stopPropagation())}><${SVG_Confirm}/></button>
+								<button aria-label="Cancel rename" onClick=${(e) => (setRenamingId(undefined), e.stopPropagation())}><${SVG_Cancel}/></button>
 							` : html`
 								${session.name}
 								<div className="flex-separator"></div>
 								<button
+									aria-label="Rename session"
 									onClick=${(e) => (startRenameSession(+sessionId, session.name), e.stopPropagation())}>
 									<${SVG_Rename}/>
 								</button>
 								<button
+									aria-label="Delete session"
 									onClick=${(e) => (deleteSession(+sessionId), e.stopPropagation())}>
 									<${SVG_Trash}/>
 								</button>
