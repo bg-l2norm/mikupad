@@ -3738,13 +3738,13 @@ function LogitBiasModal({ isOpen, closeModal, logitBias, setLogitBias, logitBias
 
 	const llamaCppSetLogitBiasParams = () => {
 		const param = [];
-		// TODO grab multi-token strings here and put them in a separate state variable
-		// for phrase bias
 		Object.keys(logitBias.bias).forEach(entry => {
 			// set banned tokens to false, else divide power by 10 to remain within
 			// reasonable range
 			const power = logitBias.bias[entry].power < -99 ? false : Number(logitBias.bias[entry].power) / 10;
-			param.push( [ Number(logitBias.bias[entry].ids[0]), power ] );
+			logitBias.bias[entry].ids.forEach(id => {
+				param.push( [ Number(id), power ] );
+			});
 		});
 		setLogitBiasParam(param);
 	};
@@ -3752,7 +3752,10 @@ function LogitBiasModal({ isOpen, closeModal, logitBias, setLogitBias, logitBias
 		const param = {};
 		Object.keys(logitBias.bias).forEach(entry => {
 			// -100 to 100
-			param[Number(logitBias.bias[entry].ids[0])] = clamp(Number(logitBias.bias[entry].power),-100,100)
+			const clampedPower = clamp(Number(logitBias.bias[entry].power),-100,100);
+			logitBias.bias[entry].ids.forEach(id => {
+				param[Number(id)] = clampedPower;
+			});
 		});
 		setLogitBiasParam(param);
 	};
@@ -3760,7 +3763,10 @@ function LogitBiasModal({ isOpen, closeModal, logitBias, setLogitBias, logitBias
 		const param = {};
 		Object.keys(logitBias.bias).forEach(entry => {
 			// -100 to 100
-			param[String(logitBias.bias[entry].ids[0])] = Number(clamp(Number(logitBias.bias[entry].power),-100,100).toFixed(1))
+			const clampedPower = Number(clamp(Number(logitBias.bias[entry].power),-100,100).toFixed(1));
+			logitBias.bias[entry].ids.forEach(id => {
+				param[String(id)] = clampedPower;
+			});
 		});
 		setLogitBiasParam(param);
 	};
@@ -3836,7 +3842,7 @@ function LogitBiasModal({ isOpen, closeModal, logitBias, setLogitBias, logitBias
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Logit Bias"
 			description="Make certain tokens more or less likely to be generated. Recommended ranges are 100 to -100, with -100 being a total ban of the token.
-			Currently only works on the first token of multi-token phrases/words.
+			Note: Multi-token strings will apply the bias globally to all constituent tokens, not as a sequence-aware phrase bias.
 			You can bias IDs directly in a comma separated list, wrapped in '/'. Example: /382,1449,1802/
 
 			Different models might tokenize words differently. Always Re-Tokenize your biases when switching models by pressing the '+' button again for every entry.">
