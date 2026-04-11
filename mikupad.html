@@ -226,7 +226,7 @@ body {
 }
 
 #prompt-overlay > .machine {
-	transition: background-color 0.15s ease-in-out, outline-color 0.15s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), outline-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 #prompt-container:hover #prompt-overlay > .machine {
 	background: color-mix(in srgb, var(--bg-color, var(--color-miku)) 10%, transparent);
@@ -280,7 +280,7 @@ body {
 	flex-direction: column;
 	flex: none;
 	font-size: calc(1rem * var(--font-size-multiplier));
-	transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+	transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 #probs > button.current {
 	background: var(--color-bg-highlight-1);
@@ -648,7 +648,7 @@ body {
 	border-radius: 4px;
 	gap: 1em;
 	user-select: none;
-	transition: background-color 0.15s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .horde-model-entry:hover {
 	background-color: var(--color-bg-highlight-3);
@@ -750,7 +750,7 @@ body {
 	color: inherit;
 	background: var(--color-bg-input-1);
 	flex: none;
-	transition: background-color 0.15s ease-in-out, outline 0.15s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), outline 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .InputBox > div > input:not(:read-only):hover, .SelectBox > select:not(:disabled):hover, .TextArea > textarea:not(:read-only):hover {
@@ -829,7 +829,7 @@ body {
 	border-radius: 50%;
 	cursor: pointer;
 	margin-top: -2px;
-	transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+	transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .InputSlider-container input[type="range"]:hover::-webkit-slider-thumb {
@@ -854,7 +854,7 @@ body {
 	background: var(--color-light);
 	border-radius: 50%;
 	cursor: pointer;
-	transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+	transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .InputSlider-container input[type="range"]:hover::-moz-range-thumb {
@@ -960,7 +960,7 @@ button {
 	color: inherit;
 	background: var(--color-bg-input-1);
 	border-radius: 2px;
-	transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out, opacity 0.15s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 button.textAreaSettings {
 	all: unset;
@@ -1056,7 +1056,7 @@ button.completing {
 	color: inherit;
 	background-color: var(--color-bg-input-1);
 	border-radius: 2px;
-	transition: background-color 0.15s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .collapsible-header:hover {
 	background-color: var(--color-bg-highlight-1);
@@ -1067,7 +1067,7 @@ button.completing {
 
 .collapsible-content {
 	transform: scaleY(0);
-	transition: transform 0.15s ease-in-out 0s, max-height 0.15s ease-in-out 0s;
+	transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) 0s, max-height 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) 0s;
 	transform-origin: center top;
 	display: flex;
 	flex-direction: column;
@@ -1114,7 +1114,7 @@ button.completing {
 	display: flex;
 	word-break: break-word;
 	user-select: none;
-	transition: background-color 0.15s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .Session:hover {
 	background-color: var(--color-bg-highlight-3);
@@ -1261,7 +1261,7 @@ button.completing {
 .MenuItem {
 	padding: 10px 15px;
 	cursor: pointer;
-	transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out;
+	transition: background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
 	font-size: 14px;
 	border-radius: 0px;
 }
@@ -1288,7 +1288,7 @@ button.completing {
 	top: 45%;
 	transform: translateY(-45%);
 	font-size: 24px;
-	transition: transform 0.2s ease-in-out;
+	transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .EditorContextMenu.nested {
@@ -2574,7 +2574,7 @@ function CollapsibleGroup({ label, stateLabel, menu, expanded, children }) {
 	return html`
 		<div className="collapsible-group" style=${{'position': 'relative'}}>
 			<div className="collapsible-header" onClick=${() => setIsCollapsed(!isCollapsed)}>
-				<${SVG_ArrowUp} style=${{ 'transform': isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.15s ease-in-out' }}/>
+				<${SVG_ArrowUp} style=${{ 'transform': isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)' }}/>
 				${label}
 				<div class="flex-separator"></div>
 				${menu && html`
