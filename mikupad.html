@@ -5534,7 +5534,7 @@ class AbstractStorage extends EventTarget {
 		super();
 		this.storeName = storeName;
 		this.dbAdapter = dbAdapter;
-		this.saveQueue = [];
+		this.pendingSaveKey = null;
 		this.saveTimer = undefined;
 	}
 
@@ -5551,19 +5551,16 @@ class AbstractStorage extends EventTarget {
 	}
 
 	async saveTimerHandler(saveCallback) {
-		const keys = [];
-		while (this.saveQueue.length) {
-			keys.push(this.saveQueue.pop());
-		}
+		const key = this.pendingSaveKey;
+		this.pendingSaveKey = null;
 
-		for (const key of keys) {
+		if (key !== null) {
 			await saveCallback(key);
 		}
 	}
 
 	enqueueSave(key) {
-		if (!this.saveQueue.includes(key))
-			this.saveQueue.push(key);
+		this.pendingSaveKey = key;
 	}
 
 	async performFullSave(data) {
@@ -5890,8 +5887,7 @@ class SessionStorage extends AbstractStorage {
 		if (!this.sessions[sessionId])
 			return;
 
-		// Flush saveQueue.
-		// TODO: Remove saveQueue, only one session actually needs to be saved at a time.
+		// Flush pending save.
 		await this.saveTimerHandler(async (sessionId) => await this.saveSessionToDB(sessionId));
 
 		//Clear data of old session in order to minimize memory usage.
