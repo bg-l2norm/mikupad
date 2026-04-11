@@ -6,7 +6,7 @@ const path = require('path');
 const minimist = require('minimist');
 const axios = require('axios');
 const open = require('open');
-const zlib = require('zlib');
+const { compressData, decompressData, normalizeStoreName } = require('./utils');
 
 const app = express();
 
@@ -58,23 +58,6 @@ app.use((req, res, next) => {
     res.status(401).send('Authentication required.');
 });
 
-const compressData = (data) => {
-    return new Promise((resolve, reject) => {
-        zlib.gzip(data, (err, buffer) => {
-            if (err) return reject(err);
-            resolve(buffer);
-        });
-    });
-};
-
-const decompressData = (buffer) => {
-    return new Promise((resolve, reject) => {
-        zlib.gunzip(buffer, (err, decompressed) => {
-            if (err) return reject(err);
-            resolve(decompressed.toString());
-        });
-    });
-};
 
 const runMigrationToV3 = (db) => {
     return new Promise((resolve, reject) => {
@@ -324,16 +307,6 @@ app.delete('/proxy/*', async (req, res) => {
     }
 });
 
-const normalizeStoreName = (storeName) => {
-    if (!storeName) {
-        return "sessions";
-    }
-    const normalizedStoreName = storeName.split(' ')[0].toLowerCase();
-    if (["sessions", "templates", "names", "themes"].includes(normalizedStoreName)) {
-        return normalizedStoreName;
-    }
-    return null;
-};
 
 // POST route to load data
 app.post('/load', (req, res) => {
