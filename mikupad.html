@@ -3595,7 +3595,9 @@ function WorldInfoSelectImportBehaviorModal({ isOpen, closeModal, setWorldInfo, 
 	</${Modal}>`;
 }
 
-function LogitBiasModal({ isOpen, closeModal, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint, cancel }) {
+function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }) {
+	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam } = biasState;
+	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint } = apiConfig;
 	const [lastBiasError, setLastBiasError] = useState(undefined);
 	const [logitBiasTemp, setLogitBiasTemp] = useState([]);
 	const [logitBiasSorted, setLogitBiasSorted] = useState([]);
@@ -9618,15 +9620,11 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 			sillyTarvernWorldInfoJSON=${sillyTarvernWorldInfoJSON}
 			cancel=${cancel}/>
 
-		<!-- TODO: The amount of parameters in this modal is a bit excessive... -->
 		<${LogitBiasModal}
 			isOpen=${modalState.bias}
 			closeModal=${() => closeModal("bias")}
-			logitBias=${logitBias}
-			setLogitBias=${setLogitBias}
-			logitBiasParam=${logitBiasParam}
-			setLogitBiasParam=${setLogitBiasParam}
-			sessionStorage=${sessionStorage} endpoint=${endpoint} endpointAPI=${endpointAPI} endpointAPIKey=${endpointAPIKey} isMikupadEndpoint=${isMikupadEndpoint}
+			biasState=${{ logitBias, setLogitBias, logitBiasParam, setLogitBiasParam }}
+			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint }}
 			cancel=${cancel}/>
 
 		<!-- Sorry. -->
