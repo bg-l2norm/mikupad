@@ -1920,18 +1920,16 @@ async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoint, sig
 			throw new Error(`HTTP ${res.status}`);
 		const { tokens } = await res.json();
 
-		const strings = [];
-		for (let i=0; i<tokens.length; i++) {
-			const string = await openaiOobaDetokenize({
-					endpoint,
-					...(endpointAPIKey ? {
-						endpointAPIKey,
-					} : {}),
-					tokens: [ tokens[i] ],
-					signal: signal,
-			});
-			strings.push(string);
-		};
+		const strings = await Promise.all(tokens.map(token =>
+			openaiOobaDetokenize({
+				endpoint,
+				...(endpointAPIKey ? {
+					endpointAPIKey,
+				} : {}),
+				tokens: [ token ],
+				signal: signal,
+			})
+		));
 		return {ids:tokens,str:strings};
 	} catch (e) {
 		return null;
