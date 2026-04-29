@@ -82,9 +82,13 @@ const runMigrationToV3 = (db) => {
                             await new Promise((res, rej) => db.run(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old`, (err) => err ? rej(err) : res()));
                             await new Promise((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, data BLOB)`, (err) => err ? rej(err) : res()));
                             const rows = await new Promise((res, rej) => db.all(`SELECT key, data FROM ${tableName}_old`, [], (err, rows) => err ? rej(err) : res(rows)));
-                            for (const row of rows) {
-                                await processRow(row);
+
+                            const chunkSize = 100;
+                            for (let i = 0; i < rows.length; i += chunkSize) {
+                                const chunk = rows.slice(i, i + chunkSize);
+                                await Promise.all(chunk.map(processRow));
                             }
+
                             await new Promise((res, rej) => db.run(`DROP TABLE ${tableName}_old`, (err) => err ? rej(err) : res()));
                         };
 
