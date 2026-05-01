@@ -6364,6 +6364,47 @@ html.ereader #sidebar {
 	width: 280px;
 }
     `},
+    "Liquid Glass": {
+		order: 4,
+		isDefault: true,
+        className: "liquid-glass",
+        css: `/* Liquid Glass */
+html.liquid-glass {
+	--color-base-0: oklch(0.95 0.04 30);
+	--color-base-10: color-mix(in oklch, var(--color-base-100) 10%, var(--color-base-0));
+	--color-base-20: color-mix(in oklch, var(--color-base-100) 80%, var(--color-base-0));
+	--color-base-30: color-mix(in oklch, var(--color-base-100) 70%, var(--color-base-0));
+	--color-base-40: color-mix(in oklch, var(--color-base-100) 60%, var(--color-base-0));
+	--color-base-50: color-mix(in oklch, var(--color-base-100) 50%, var(--color-base-0));
+	--color-base-60: color-mix(in oklch, var(--color-base-100) 40%, var(--color-base-0));
+	--color-base-70: color-mix(in oklch, var(--color-base-100) 30%, var(--color-base-0));
+	--color-base-80: color-mix(in oklch, var(--color-base-100) 20%, var(--color-base-0));
+	--color-base-90: color-mix(in oklch, var(--color-base-100) 10%, var(--color-base-0));
+	--color-base-100: oklch(0.20 0.02 30);
+	--color-dark: var(--color-base-100);
+	--color-light: var(--color-base-0);
+
+	--color-text-ui: var(--color-light);
+
+	color-scheme: dark;
+}
+html.liquid-glass body {
+    background: linear-gradient(135deg, #ff7a18 0%, #af002d 50%, #319197 100%);
+    background-attachment: fixed;
+}
+html.liquid-glass #prompt-container {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+html.liquid-glass #sidebar {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: url(#liquid-glass-filter) brightness(120%);
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+    `},
 };
 
 const defaultPresets = {
@@ -6808,6 +6849,8 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 			return "NockoffAI";
 		case 4:
 			return "E-Reader";
+		case 5:
+			return "Liquid Glass";
 		default:
 			return "Serif Light";
 		}
@@ -9848,7 +9891,23 @@ async function main() {
     await themeStorage.init();
 
 	createRoot(document.body).render(html`
-		<${ErrorBoundary} FallbackComponent=${CrashScreenFallback}>
+
+        <svg style=${{ display: 'none' }}>
+            <defs>
+                <filter id="liquid-glass-filter">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blurred_source"/>
+                    <feImage href="data:image/png;base64,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" result="displacement_map" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" />
+                    <feDisplacementMap in="blurred_source" in2="displacement_map" scale="55" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
+
+                    <feColorMatrix in="displaced" type="saturate" values="50" result="displaced_saturated"/>
+                    <feImage href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABmJLR0QA/wD/AP+gvaeTAAADfklEQVR4nO3ZQU4UQRiG4e8Hgi6JogG9gCaeAL2DB/AQnsXoPbyEMcQFsiDsdCeGwA42YPB3YZMgVrc9hqZm6nufZIIpBqcq1dO81ERmvpb0Sr/ltcfUYzVec57Gas9jNzLzk+nia4/NxTyWnBfvvvmXF4Dt4t03X5KuXwBWi3fffEm5MsMP7kv6LGlP0oGkE0mnEXEuVJOZy5LuSlqVtCZpQ9IjSQ/H7Gtk5sd/PGlH0tuI+FphffhPmbkuaUvS5tDd4PIC6Nv895LeREQOvBbmVGaGpBeSnvTdDYYicIfNX2zd3n2Q9L0b+muv+yLwp6R3bP7i6/Zwu++NvlTY/JS0HxFfKs4bNygijiUdlfZ6qed3w27F+WIaB6W97jsJ3Ks4UUzjsPs6KgK/VZwopnEySwSe1J0rJnA2SwSeVpwopnE+OgIj4kfFiWICEXExSwSiXaMiEG0aHYFo0+gIRJtGnwSiTUQgiEBnRKA5ItAcEWhuVASibYMRKC6Cpg1GoLgLNK83AkvfRHuKEajSrQFNKkYgm++FgyBjHASZ4yDIHJ8Ggk8DnfFpoDki0BwRaI4IBBHojAg0RwSaIwLNEYEgAp0RgeaIQHNEoDkiEESgMyLQHBFojgg0RwSCCHRGBJojAs0RgeaIQBCBzohAc0SgOSLQHBEIItAZEWiOCDRHBJojAkEEOiMCzRGB5ohAc0QgiEBnRKA5ItAcEWiOCAQR6IwINEcEmiMCzRGBIAKdEYHmiEBzRKC5URGItg1GoLgImjYYgeIu0LzeCCx9E+0pRqBKtwY0qRiBbL4XDoKMcRBkjoMgc3waCD4NdMangeaIQHNEoDkiEESgMyLQHBFojgg0RwSCCHQ2LgIzc7nuPHHTMjNmicA7FeeKaURpr/sikAugPVHa674IXKs4UUwjuq+jInCj4kQxjZVZTgIf150rJlDc674IfJCZ6xUnixvU/VVX3Ou+CExJW92fDlh8qz1v9MGTwE1Jz7kIFltm3rny7tf1vS6GwZV/P5W0lpnbEXFccR2YUXfbXx3afBXKsPSkDUkvM/NI0oGkQ0knks4lnUXERb1lortDX32sdJve13d/jK2MeVL3uC/pnqRnV5+TmWN+dpaxm/y/FnHsVl9z8PbQ+uLncOzWX3MoAptf/JyNVZlH30mgxeLnaKzaPJYk7boufk7Gqs7jFw2PIO7gT60KAAAAAElFTkSuQmCC" result="specular_layer" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" />
+                    <feGaussianBlur in="specular_layer" stdDeviation="2" result="specular_layer_blurred"/>
+                    <feComposite in="displaced_saturated" in2="specular_layer_blurred" operator="in" result="specular_saturated"/>
+                    <feBlend in="specular_saturated" in2="displaced" mode="normal"/>
+                </filter>
+            </defs>
+        </svg>
+        <${ErrorBoundary} FallbackComponent=${CrashScreenFallback}>
 			<${App}
 				sessionStorage=${sessionStorage}
 				templateStorage=${templateStorage}
