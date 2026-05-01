@@ -1645,6 +1645,38 @@ async function llamaCppDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, sig
 	return content
 }
 
+function applyTemperatureToProbs(probsArr, token, temperature) {
+	const t = Math.max(0.01, temperature ?? 1);
+	if (t === 1) {
+		let chosenProb;
+		probsArr.forEach(p => {
+			if (p.logprob !== undefined && p.prob === undefined) {
+				p.prob = Math.exp(p.logprob);
+			}
+			if (p.tok_str === token) chosenProb = p.prob;
+		});
+		return { probs: probsArr, prob: chosenProb };
+	}
+
+	let pSum = 0;
+	let pOrigSum = 0;
+	probsArr.forEach(p => {
+		const orig_p = p.prob !== undefined ? p.prob : Math.exp(p.logprob);
+		pOrigSum += orig_p;
+		const log_p = p.logprob !== undefined ? p.logprob : Math.log(Math.max(1e-10, orig_p));
+		p.temp_p = Math.exp(log_p / t);
+		pSum += p.temp_p;
+	});
+
+	let chosenProb;
+	probsArr.forEach(p => {
+		p.prob = pSum > 0 ? p.temp_p * (pOrigSum / pSum) : 0;
+		if (p.tok_str === token) chosenProb = p.prob;
+		delete p.temp_p;
+	});
+	return { probs: probsArr, prob: chosenProb };
+}
+
 async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/completion`, {
 		method: 'POST',
@@ -1677,16 +1709,15 @@ async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, si
 					return { tok_str: t, prob: p };
 				});
 			} else {  // post_sampling_probs: false
+					let rawProbsArr = [];
 				if (choice?.probs) {
-					probs = choice.probs;
-					prob = probs.find(p => p.tok_str === token)?.prob;
+						rawProbsArr = choice.probs.map(p => ({ tok_str: p.tok_str, prob: p.prob }));
 				} else {
-					probs = Object.values(choice?.top_logprobs || chunk.top_logprobs || {}).map(({ token: t, logprob }) => {
-						const p = Math.exp(logprob);
-						if (t === token) prob = p;
-						return { tok_str: t, prob: p };
-					});
+						rawProbsArr = Object.values(choice?.top_logprobs || chunk.top_logprobs || {}).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
 				}
+					const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
+					probs = res.probs;
+					prob = res.prob;
 			}
 
 			yield {
@@ -1799,12 +1830,10 @@ async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, s
 		for await (const chunk of chunks) {
 			const { token, top_logprobs } = chunk;
 
-			let prob;
-			const probs = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }) => {
-				const p = Math.exp(logprob);
-				if (t === token) prob = p;
-				return { tok_str: t, prob: p };
-			});
+				let rawProbsArr = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
+				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
+				const probs = res.probs;
+				let prob = res.prob;
 
 			yield {
 				content: token,
@@ -2129,21 +2158,20 @@ async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, sign
 			const text = choice.text;
 			const logprobsData = choice.logprobs;
 			let probs = [];
-
 			let prob;
+
+			let rawProbsArr = [];
 			if (logprobsData?.content?.[0]?.top_logprobs) {
-				probs = logprobsData.content[0].top_logprobs.map(({ token: t, logprob }) => {
-					const p = Math.exp(logprob);
-					if (t === text) prob = p;
-					return { tok_str: t, prob: p };
-				});
+				rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
 			} else if (logprobsData?.top_logprobs?.[0]) {
 				const top_logprobs_obj = logprobsData.top_logprobs[0];
-				probs = Object.entries(top_logprobs_obj).map(([tok, logprob]) => {
-					const p = Math.exp(logprob);
-					if (tok === text) prob = p;
-					return { tok_str: tok, prob: p };
-				});
+				rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob }));
+			}
+
+			if (rawProbsArr.length > 0) {
+				const res = applyTemperatureToProbs(rawProbsArr, text, options.temperature);
+				probs = res.probs;
+				prob = res.prob;
 			}
 
 			yield {
@@ -2257,12 +2285,10 @@ async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, 
 			const top_logprobs = chunk.choices[0].logprobs?.content?.[0]?.top_logprobs ?? {};
 			if (!token) continue;
 
-			let prob;
-			const probs = Object.values(top_logprobs).map(({ token: t, logprob }) => {
-				const p = Math.exp(logprob);
-				if (t === token) prob = p;
-				return { tok_str: t, prob: p };
-			});
+				let rawProbsArr = Object.values(top_logprobs).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
+				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
+				const probs = res.probs;
+				let prob = res.prob;
 
 			yield {
 				content: token,
