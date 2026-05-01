@@ -1669,21 +1669,25 @@ async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, si
 			const token = chunk.content || chunk.token;
 			const choice = chunk.completion_probabilities?.[0];
 
+			let prob;
 			let probs;
 			if (choice?.top_probs) { // post_sampling_probs: true
-				probs = choice.top_probs.map(({ token, prob }) => ({
-					tok_str: token,
-					prob: prob
-				}));
+				probs = choice.top_probs.map(({ token: t, prob: p }) => {
+					if (t === token) prob = p;
+					return { tok_str: t, prob: p };
+				});
 			} else {  // post_sampling_probs: false
-				probs = choice?.probs ??
-					Object.values(choice?.top_logprobs || chunk.top_logprobs || {}).map(({ token, logprob }) => ({
-						tok_str: token,
-						prob: Math.exp(logprob)
-					}));
+				if (choice?.probs) {
+					probs = choice.probs;
+					prob = probs.find(p => p.tok_str === token)?.prob;
+				} else {
+					probs = Object.values(choice?.top_logprobs || chunk.top_logprobs || {}).map(({ token: t, logprob }) => {
+						const p = Math.exp(logprob);
+						if (t === token) prob = p;
+						return { tok_str: t, prob: p };
+					});
+				}
 			}
-
-			const prob = probs.find(p => p.tok_str === token)?.prob;
 
 			yield {
 				content: token,
@@ -1795,11 +1799,12 @@ async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, s
 		for await (const chunk of chunks) {
 			const { token, top_logprobs } = chunk;
 
-			const probs = Object.values(top_logprobs ?? {}).map(({ token, logprob }) => ({
-				tok_str: token,
-				prob: Math.exp(logprob)
-			}));
-			const prob = probs.find(p => p.tok_str === token)?.prob;
+			let prob;
+			const probs = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }) => {
+				const p = Math.exp(logprob);
+				if (t === token) prob = p;
+				return { tok_str: t, prob: p };
+			});
 
 			yield {
 				content: token,
@@ -2125,20 +2130,21 @@ async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, sign
 			const logprobsData = choice.logprobs;
 			let probs = [];
 
+			let prob;
 			if (logprobsData?.content?.[0]?.top_logprobs) {
-				probs = logprobsData.content[0].top_logprobs.map(({ token, logprob }) => ({
-					tok_str: token,
-					prob: Math.exp(logprob)
-				}));
+				probs = logprobsData.content[0].top_logprobs.map(({ token: t, logprob }) => {
+					const p = Math.exp(logprob);
+					if (t === text) prob = p;
+					return { tok_str: t, prob: p };
+				});
 			} else if (logprobsData?.top_logprobs?.[0]) {
 				const top_logprobs_obj = logprobsData.top_logprobs[0];
-				probs = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({
-					tok_str: tok,
-					prob: Math.exp(logprob)
-				}));
+				probs = Object.entries(top_logprobs_obj).map(([tok, logprob]) => {
+					const p = Math.exp(logprob);
+					if (tok === text) prob = p;
+					return { tok_str: tok, prob: p };
+				});
 			}
-
-			const prob = probs.find(p => p.tok_str === text)?.prob;
 
 			yield {
 				content: text,
@@ -2251,11 +2257,12 @@ async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, 
 			const top_logprobs = chunk.choices[0].logprobs?.content?.[0]?.top_logprobs ?? {};
 			if (!token) continue;
 
-			const probs = Object.values(top_logprobs).map(({ token, logprob }) => ({
-				tok_str: token,
-				prob: Math.exp(logprob)
-			}));
-			const prob = probs.find(p => p.tok_str === token)?.prob;
+			let prob;
+			const probs = Object.values(top_logprobs).map(({ token: t, logprob }) => {
+				const p = Math.exp(logprob);
+				if (t === token) prob = p;
+				return { tok_str: t, prob: p };
+			});
 
 			yield {
 				content: token,
